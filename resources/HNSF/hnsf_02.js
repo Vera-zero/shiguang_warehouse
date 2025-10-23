@@ -1,5 +1,27 @@
 // ====================== 工具函数 ======================
 
+/**
+ * 检查用户是否已登录。
+ * 如果当前URL包含登录关键字，说明用户未登录，返回false。
+ * 如果不包含登录关键字，说明用户已登录，返回true。
+ */
+function isUserLoggedIn() {
+    const url = window.location.href;
+    const loginKeywords = [
+        "https://jwc.htu.edu.cn/xtgl/login_slogin.html"
+    ];
+    
+    // 检查URL是否包含登录关键字
+    for (const keyword of loginKeywords) {
+        if (url.includes(keyword)) {
+            return false; // 包含登录关键字，说明用户未登录
+        }
+    }
+    
+    // 不包含登录关键字，说明用户已登录
+    return true;
+}
+
 // 展开 weeks 字符串 -> 数字数组
 function parseWeeks(weeksStr) {
     const weeks = new Set();
@@ -254,6 +276,12 @@ async function showAnnouncement() {
 
 // ====================== 主流程 ======================
 async function runImportFlow() {
+    // 检查用户是否已登录
+    if (!isUserLoggedIn()) {
+        AndroidBridge.showToast("检测到未登录状态，请先登录后再使用课程导入功能！");
+        return;
+    }
+    
     // 显示公告
     await showAnnouncement();
     
@@ -262,7 +290,6 @@ async function runImportFlow() {
     // 1️⃣ 获取课程数据
     const coursesData = await fetchCoursesData();
     if (!coursesData) {
-        AndroidBridge.notifyTaskCompletion();
         return;
     }
 
@@ -270,21 +297,21 @@ async function runImportFlow() {
     const courses = await processCoursesData(coursesData);
     if (!courses) {
         AndroidBridge.showToast("没有找到有效的课程数据！");
-        AndroidBridge.notifyTaskCompletion();
         return;
     }
 
     // 3️⃣ 保存课程
     const saveResult = await saveCourses(courses);
     if (!saveResult) {
-        AndroidBridge.notifyTaskCompletion();
         return;
     }
 
     // 4️⃣ 导入预设时间段
     await importPresetTimeSlots();
 
-    AndroidBridge.showToast("所有任务完成！");
+    // ✅ 只有所有步骤都成功完成，才通知任务完成
+    AndroidBridge.showToast(`课程导入成功，共导入 ${courses.length} 门课程！`);
+    console.log("JS：整个导入流程执行完毕并成功。");
     AndroidBridge.notifyTaskCompletion();
 }
 

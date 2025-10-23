@@ -1,5 +1,27 @@
 // ====================== 工具函数 ======================
 
+/**
+ * 检查用户是否已登录。
+ * 如果当前URL包含登录关键字，说明用户未登录，返回false。
+ * 如果不包含登录关键字，说明用户已登录，返回true。
+ */
+function isUserLoggedIn() {
+    const url = window.location.href;
+    const loginKeywords = [
+        "https://we.hnzj.edu.cn/sso/login"
+    ];
+    
+    // 检查URL是否包含登录关键字
+    for (const keyword of loginKeywords) {
+        if (url.includes(keyword)) {
+            return false; // 包含登录关键字，说明用户未登录
+        }
+    }
+    
+    // 不包含登录关键字，说明用户已登录
+    return true;
+}
+
 // 展开 weeks 字符串 -> 数字数组
 function parseWeeks(weeksStr) {
     const weeks = new Set();
@@ -171,12 +193,17 @@ async function importPresetTimeSlots() {
 
 // ====================== 主流程 ======================
 async function runImportFlow() {
+    // 检查用户是否已登录
+    if (!isUserLoggedIn()) {
+        AndroidBridge.showToast("检测到未登录状态，请先登录后再使用课程导入功能！");
+        return;
+    }
+    
     AndroidBridge.showToast("课程导入流程即将开始...");
 
     // 1️⃣ 获取学年学期
     const yearTermData = await fetchSchoolYearTerms();
     if (!yearTermData) {
-        AndroidBridge.notifyTaskCompletion();
         return;
     }
 
@@ -184,28 +211,27 @@ async function runImportFlow() {
     const selection = await selectYearAndTerm(yearTermData.schoolYears, yearTermData.schoolTerms);
     if (!selection) {
         AndroidBridge.showToast("用户取消选择！");
-        AndroidBridge.notifyTaskCompletion();
         return;
     }
 
     // 3️⃣ 异步获取课程并处理
     const courses = await fetchCoursesForAllWeeks(selection.year, selection.term);
     if (!courses) {
-        AndroidBridge.notifyTaskCompletion();
         return;
     }
 
     // 4️⃣ 保存课程
     const saveResult = await saveCourses(courses);
     if (!saveResult) {
-        AndroidBridge.notifyTaskCompletion();
         return;
     }
 
     // 5️⃣ 导入预设时间段
     await importPresetTimeSlots();
 
-    AndroidBridge.showToast("所有任务完成！");
+    // ✅ 只有所有步骤都成功完成，才通知任务完成
+    AndroidBridge.showToast(`课程导入成功，共导入 ${courses.length} 门课程！`);
+    console.log("JS：整个导入流程执行完毕并成功。");
     AndroidBridge.notifyTaskCompletion();
 }
 

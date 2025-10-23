@@ -42,3 +42,8 @@ schools:
     name: "塔里木大学"
     initial: "T"
     resource_folder: "TARU"      
+
+  - id: "MMPT"
+    name: "茂名职业技术学院"
+    initial: "M"
+    resource_folder: "MMPT"  
