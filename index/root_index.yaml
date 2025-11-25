@@ -77,3 +77,8 @@ schools:
     name: "内蒙古工业大学"
     initial: "N"
     resource_folder: "IMUT"
+
+  - id: "KSU"
+    name: "喀什大学"
+    initial: "K"
+    resource_folder: "KSU"
