@@ -102,3 +102,8 @@ schools:
     name: "江西理工大学"
     initial: "J"
     resource_folder: "JXUST"  
+
+  - id: "GZST"
+    name: "广州松田职业学院"
+    initial: "G"
+    resource_folder: "GZST"      
