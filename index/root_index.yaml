@@ -132,3 +132,8 @@ schools:
     name: "南京师范大学"
     initial: "N"
     resource_folder: "NJNU"
+
+  - id: "XMCU"
+    name: "厦门城市职业学院"
+    initial: "X"
+    resource_folder: "XMCU"  
