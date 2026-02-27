@@ -1,4 +1,4 @@
-// 淮北理工学院(hblgxy.edu.cn) 拾光课程表适配脚本
+// 新疆工程学院(xjie.edu.cn) 拾光课程表适配脚本
 // 非该大学开发者适配,开发者无法及时发现问题
 // 出现问题请提联系开发者或者提交pr更改,这更加快速
 
@@ -85,7 +85,8 @@ function parseTimetableToModel(doc) {
                     }
 
                     // 提取教师、周次(节次)、地点
-                    const teacher = tempDiv.querySelector('font[title="教师"]')?.innerText || "未知教师";
+                    const teacherRaw = tempDiv.querySelector('font[title="教师"]')?.innerText || "未知教师";
+                    const teacher = teacherRaw.replace("任课教师:", "");
                     const weekStr = tempDiv.querySelector('font[title="周次(节次)"]')?.innerText || "";
                     const position = tempDiv.querySelector('font[title="教室"]')?.innerText || "未知地点";
 
@@ -133,20 +134,17 @@ async function saveAppConfig() {
  */
 async function saveAppTimeSlots() {
     const timeSlots = [
-        { "number": 1, "startTime": "08:00", "endTime": "08:45" },
-        { "number": 2, "startTime": "08:55", "endTime": "09:40" },
-        { "number": 3, "startTime": "10:00", "endTime": "10:45" },
-        { "number": 4, "startTime": "10:55", "endTime": "11:40" },
-        { "number": 5, "startTime": "14:00", "endTime": "14:45" },
-        { "number": 6, "startTime": "14:55", "endTime": "15:40" },
-        { "number": 7, "startTime": "16:00", "endTime": "16:45" },
-        { "number": 8, "startTime": "16:55", "endTime": "17:40" },
-        { "number": 9, "startTime": "19:00", "endTime": "19:45" },
-        { "number": 10, "startTime": "19:55", "endTime": "20:40" },
-        { "number": 11, "startTime": "20:50", "endTime": "21:35" },
-        { "number": 12, "startTime": "21:45", "endTime": "22:30" },
-        { "number": 13, "startTime": "22:40", "endTime": "23:25" },
-        { "number": 14, "startTime": "23:25", "endTime": "23:59" }
+        { "number": 1, "startTime": "10:00", "endTime": "10:45" },
+        { "number": 2, "startTime": "10:55", "endTime": "11:40" },
+        { "number": 3, "startTime": "11:55", "endTime": "12:40" },
+        { "number": 4, "startTime": "12:50", "endTime": "13:35" },
+        { "number": 5, "startTime": "13:45", "endTime": "14:30" },
+        { "number": 6, "startTime": "16:00", "endTime": "16:45" },
+        { "number": 7, "startTime": "16:55", "endTime": "17:40" },
+        { "number": 8, "startTime": "17:55", "endTime": "18:40" },
+        { "number": 9, "startTime": "18:50", "endTime": "19:35" },
+        { "number": 10, "startTime": "19:50", "endTime": "20:35" },
+        { "number": 11, "startTime": "20:45", "endTime": "21:30" }
     ];
     return await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(timeSlots));
 }
@@ -192,7 +190,7 @@ async function runImportFlow() {
 
         AndroidBridge.showToast("正在获取教务数据...");
         
-        const response = await fetch("https://a.hblgxy.edu.cn:5111/jsxsd/xskb/xskb_list.do", {
+        const response = await fetch("https://jwxt.xjie.edu.cn/jsxsd/xskb/xskb_list.do", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: `cj0701id=&zc=&demo=&xnxq01id=${semesterId}`,
