@@ -21,6 +21,31 @@ async function demoAlert() {
     }
 }
 
+// 1.1 显示校区选择弹窗
+async function showCampusSelection() {
+    try {
+        console.log("即将显示校区选择弹窗...");
+        const selectedCampus = await window.AndroidBridgePromise.showSingleChoiceDialog(
+            "请选择校区",
+            ["南湖校区", "浑南校区"],
+            "浑南校区" // 默认选中浑南校区
+        );
+        
+        if (selectedCampus) {
+            console.log(`用户选择了: ${selectedCampus}`);
+            AndroidBridge.showToast(`已选择: ${selectedCampus}`);
+            return selectedCampus;
+        } else {
+            console.log("用户取消了校区选择");
+            return null; // 用户取消
+        }
+    } catch (error) {
+        console.error("显示校区选择弹窗时发生错误:", error);
+        AndroidBridge.showToast("校区选择出错: " + error.message);
+        return null; // 出现错误时也返回 null
+    }
+}
+
 // 2. 从课表页面中提取课程数据
 async function extractCoursesFromPage() {
     const iframe = document.querySelector('iframe');
@@ -74,6 +99,7 @@ async function extractCoursesFromPage() {
 
     return { lessons: lessons, time_text: time_text };
 }
+
 // 2.1 解析课程详情字符串，提取周次、教师和地点信息
 function parseCourseDetails(detailStr) {
     // 匹配所有周次模式
@@ -193,7 +219,7 @@ function parseSemesterToDate(semesterStr) {
 
 // 3. 导入课程数据
 async function SaveCourses(lessons) {
-    console.log("正在准备测试课程数据...");
+    console.log("正在准备导入课程数据...");
     const testCourses = lessons;
 
     try {
@@ -203,7 +229,7 @@ async function SaveCourses(lessons) {
             console.log("课程导入成功！");
         } else {
             console.log("课程导入未成功，结果：" + result);
-            AndroidBridge.showToast("测试课程导入失败，请查看日志。");
+            AndroidBridge.showToast("课程导入失败，请查看日志。");
         }
     } catch (error) {
         console.error("导入课程时发生错误:", error);
@@ -211,10 +237,12 @@ async function SaveCourses(lessons) {
     }
 }
 
-// 4. 导入预设时间段
-async function importPresetTimeSlots() {
-    console.log("正在准备预设时间段数据...");
-    const presetTimeSlots = [
+// 4. 根据校区导入对应的时间段
+async function importTimeSlotsByCampus(campus) {
+    console.log(`正在准备${campus}时间段数据...`);
+    
+    // 浑南校区时间表（现有时间表）
+    const hunNanTimeSlots = [
         { "number": 1, "startTime": "08:30", "endTime": "09:15" },
         { "number": 2, "startTime": "09:25", "endTime": "10:10" },
         { "number": 3, "startTime": "10:30", "endTime": "11:15" },
@@ -228,15 +256,35 @@ async function importPresetTimeSlots() {
         { "number": 11, "startTime": "20:30", "endTime": "21:15" },
         { "number": 12, "startTime": "21:15", "endTime": "22:10" },
     ];
+    
+    // 南湖校区时间表（根据图片内容）
+    const nanHuTimeSlots = [
+        { "number": 1, "startTime": "08:00", "endTime": "08:45" },
+        { "number": 2, "startTime": "08:55", "endTime": "09:40" },
+        { "number": 3, "startTime": "10:00", "endTime": "10:45" },
+        { "number": 4, "startTime": "10:55", "endTime": "11:40" },
+        { "number": 5, "startTime": "14:00", "endTime": "14:45" },
+        { "number": 6, "startTime": "14:55", "endTime": "15:40" },
+        { "number": 7, "startTime": "16:00", "endTime": "16:45" },
+        { "number": 8, "startTime": "16:55", "endTime": "17:40" },
+        { "number": 9, "startTime": "18:30", "endTime": "19:15" },
+        { "number": 10, "startTime": "19:25", "endTime": "20:10" },
+        { "number": 11, "startTime": "20:20", "endTime": "21:05" },
+        { "number": 12, "startTime": "21:15", "endTime": "22:00" },
+    ];
+    
+    // 根据校区选择对应的时间表
+    const timeSlotsToImport = (campus === "南湖校区") ? nanHuTimeSlots : hunNanTimeSlots;
 
     try {
-        console.log("正在尝试导入预设时间段...");
-        const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(presetTimeSlots));
+        console.log(`正在尝试导入${campus}时间段...`);
+        const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(timeSlotsToImport));
         if (result === true) {
-            console.log("预设时间段导入成功！");
+            console.log(`${campus}时间段导入成功！`);
+            AndroidBridge.showToast(`${campus}时间段已应用`);
         } else {
-            console.log("预设时间段导入未成功，结果：" + result);
-            window.AndroidBridge.showToast("测试时间段导入失败，请查看日志。");
+            console.log("时间段导入未成功，结果：" + result);
+            window.AndroidBridge.showToast("时间段导入失败，请查看日志。");
         }
     } catch (error) {
         console.error("导入时间段时发生错误:", error);
@@ -267,7 +315,7 @@ async function SaveConfig(time_text) {
             console.log("课表配置导入成功！");
         } else {
             console.log("课表配置导入未成功，结果：" + result);
-            AndroidBridge.showToast("测试配置导入失败，请查看日志。");
+            AndroidBridge.showToast("配置导入失败，请查看日志。");
         }
     } catch (error) {
         console.error("导入配置时发生错误:", error);
@@ -279,28 +327,43 @@ async function SaveConfig(time_text) {
  * 编排这些异步操作，并在用户取消时停止后续执行。
  */
 async function runAllDemosSequentially() {
-    AndroidBridge.showToast("所有演示将按顺序开始...");
+    AndroidBridge.showToast("开始导入课表...");
+    
     // 1. 提示公告
     const alertResult = await demoAlert();
     if (!alertResult) {
-        console.log("用户取消了 Alert 演示，停止后续执行。");
+        console.log("用户取消了公告提示，停止后续执行。");
         return; // 用户取消，立即退出函数
     }
 
-    console.log("所有弹窗演示已完成。");
-    AndroidBridge.showToast("所有弹窗演示已完成！");
+    // 2. 校区选择
+    const selectedCampus = await showCampusSelection();
+    if (!selectedCampus) {
+        console.log("用户取消了校区选择，停止后续执行。");
+        AndroidBridge.showToast("已取消导入");
+        return; // 用户取消，立即退出函数
+    }
 
+    console.log(`开始为${selectedCampus}导入课表数据...`);
+    AndroidBridge.showToast(`正在导入${selectedCampus}课表...`);
 
-    // 以下是数据导入，与用户交互无关，可以继续
-    const PageInfo = await extractCoursesFromPage();//从课表页面中提取课程数据
+    // 3. 从课表页面中提取课程数据
+    const PageInfo = await extractCoursesFromPage();
     const lessons = PageInfo.lessons;
     const time_text = PageInfo.time_text;
-    await SaveCourses(lessons);//保存课程数据到数据库
-    await importPresetTimeSlots();//导入预设时间槽
-    await SaveConfig(time_text);//保存底层配置
+    
+    // 4. 保存课程数据到数据库
+    await SaveCourses(lessons);
+    
+    // 5. 根据选择的校区导入对应的时间段
+    await importTimeSlotsByCampus(selectedCampus);
+    
+    // 6. 保存底层配置
+    await SaveConfig(time_text);
 
     // 发送最终的生命周期完成信号
     AndroidBridge.notifyTaskCompletion();
+    AndroidBridge.showToast("课表导入完成！");
 }
 
 // 启动所有演示
