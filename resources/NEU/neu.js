@@ -23,26 +23,23 @@ async function demoAlert() {
 
 // 1.1 显示校区选择弹窗
 async function showCampusSelection() {
+    const campuses = ["南湖校区", "浑南校区"];
     try {
-        console.log("即将显示校区选择弹窗...");
-        const selectedCampus = await window.AndroidBridgePromise.showSingleChoiceDialog(
-            "请选择校区",
-            ["南湖校区", "浑南校区"],
-            "浑南校区" // 默认选中浑南校区
+        console.log("即将显示单选列表弹窗...");
+        const selectedIndex = await window.AndroidBridgePromise.showSingleSelection(
+            "选择你所在的校区",
+            JSON.stringify(campuses),
+            2
         );
-        
-        if (selectedCampus) {
-            console.log(`用户选择了: ${selectedCampus}`);
-            AndroidBridge.showToast(`已选择: ${selectedCampus}`);
-            return selectedCampus;
+        if (selectedIndex !== -1) {
+            return campuses[selectedIndex]; // 返回用户选择的校区
         } else {
-            console.log("用户取消了校区选择");
-            return null; // 用户取消
+            return false; // 用户取消时返回 false
         }
     } catch (error) {
-        console.error("显示校区选择弹窗时发生错误:", error);
-        AndroidBridge.showToast("校区选择出错: " + error.message);
-        return null; // 出现错误时也返回 null
+        console.error("显示单选列表弹窗时发生错误:", error);
+        AndroidBridge.showToast("Single Selection：显示列表出错！" + error.message);
+        return false; // 出现错误时也返回 false
     }
 }
 
@@ -183,40 +180,6 @@ function parseWeeksString(weeksStr) {
     return [...new Set(result)].sort((a, b) => a - b);
 }
 
-// 2.3 解析学期字符串，返回对应的开学日期
-function parseSemesterToDate(semesterStr) {
-    // 使用正则表达式提取年份和学期信息
-    const regex = /(\d{4})-(\d{4})学年(春季|秋季)学期/;
-    const match = semesterStr.match(regex);
-    
-    if (!match) {
-        throw new Error('学期字符串格式不正确，应为："XXXX-XXXX学年春季/秋季学期"');
-    }
-    
-    const startYear = parseInt(match[1]);  // 前一个年份
-    const endYear = parseInt(match[2]);    // 后一个年份
-    const season = match[3];               // 春季或秋季
-    
-    // 验证年份格式是否正确（后一年份应比前一年份大1）
-    if (endYear !== startYear + 1) {
-        throw new Error('年份格式不正确，后一年份应比前一年份大1');
-    }
-    
-    let resultDate;
-    
-    if (season === '春季') {
-        // 春季学期：使用后一个年份的3月1日
-        resultDate = `${endYear}-03-01`;
-    } else if (season === '秋季') {
-        // 秋季学期：使用前一个年份的9月1日
-        resultDate = `${startYear}-09-01`;
-    } else {
-        throw new Error('学期类型不正确，应为"春季"或"秋季"');
-    }
-    
-    return resultDate;
-}
-
 // 3. 导入课程数据
 async function SaveCourses(lessons) {
     console.log("正在准备导入课程数据...");
@@ -295,10 +258,8 @@ async function importTimeSlotsByCampus(campus) {
 // 5. 导入课表配置
 async function SaveConfig(time_text) {
     console.log("正在准备配置数据...");
-    startDate = parseSemesterToDate(time_text);
     // 注意：只传入要修改的字段，其他字段（如 semesterTotalWeeks）会使用 Kotlin 模型中的默认值
     const courseConfigData = {
-        "semesterStartDate": startDate,
         "semesterTotalWeeks": 18,
         "defaultClassDuration": 45,
         "defaultBreakDuration": 10,
@@ -329,12 +290,6 @@ async function SaveConfig(time_text) {
 async function runAllDemosSequentially() {
     AndroidBridge.showToast("开始导入课表...");
     
-    // // 1. 提示公告
-    // const alertResult = await demoAlert();
-    // if (!alertResult) {
-    //     console.log("用户取消了公告提示，停止后续执行。");
-    //     return; // 用户取消，立即退出函数
-    // }
 
     // 2. 校区选择
     const selectedCampus = await showCampusSelection();
