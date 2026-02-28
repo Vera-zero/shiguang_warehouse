@@ -23,42 +23,57 @@ async function demoAlert() {
 
 // 2. 从课表页面中提取课程数据
 async function extractCoursesFromPage() {
-const iframe = document.querySelector('iframe');
-const lessons = [];
-const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    const iframe = document.querySelector('iframe');
+    const lessons = [];
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
     const time = iframeDoc.querySelector('.kbappTimeXQText')
     const time_text = time.textContent; 
     const dayCols = iframeDoc.querySelectorAll('.kbappTimetableDayColumnRoot');
-    dayCols.forEach((dayCol, dayIndex) => {// 遍历每一列
+    
+    dayCols.forEach((dayCol, dayIndex) => {
         const timeSlots = dayCol.children;
-        const day = dayIndex >= 1 ? dayIndex  : 7; // 课表第一天为星期日
+        const day = dayIndex >= 1 ? dayIndex : 7;
         
         let startSection = 0;
         let endSection = 0;
+        
         for (let slot of timeSlots) {
             const flexValue = slot.style.flex;
             const nums = parseInt(flexValue.split(' ')[0]);
-            startSection = endSection+1;
+            startSection = endSection + 1;
             endSection = startSection + nums - 1;
+            
             if (slot.classList.contains('kbappTimetableDayColumnConflictContainer')) {
-                const courseItem = slot.querySelector('.kbappTimetableCourseRenderCourseItem');
-                const infoTexts = courseItem.querySelectorAll('.kbappTimetableCourseRenderCourseItemInfoText');
-                let name,details;
-
-                infoTexts.forEach((text, idx) => {
-                    if (idx === 0) name = text.textContent.trim();
-                    else if (idx === 1) details = parseCourseDetails(text.textContent.trim());//weeks,teacher,position
-                    else if (idx === 2) return 
+                // 获取所有课程项
+                const courseItems = slot.querySelectorAll('.kbappTimetableCourseRenderCourseItem');
+                
+                courseItems.forEach(courseItem => {
+                    const infoTexts = courseItem.querySelectorAll('.kbappTimetableCourseRenderCourseItemInfoText');
+                    let name, details;
+                    
+                    infoTexts.forEach((text, idx) => {
+                        if (idx === 0) name = text.textContent.trim();
+                        else if (idx === 1) details = parseCourseDetails(text.textContent.trim());
+                        else if (idx === 2) return;
+                    });
+                    
+                    lessons.push({
+                        name: name, 
+                        teacher: details.teacher, 
+                        position: details.position, 
+                        day: day, 
+                        startSection: startSection, 
+                        endSection: endSection,
+                        weeks: details.weeks
+                    });
                 });
-                lessons.push({name: name, teacher: details.teacher, position: details.position, day: day, startSection: startSection, endSection: endSection,weeks: details.weeks});
             } 
         }
         console.log("信息提取中");
     });
 
-return {lessons:lessons,time_text:time_text};
+    return { lessons: lessons, time_text: time_text };
 }
-
 // 2.1 解析课程详情字符串，提取周次、教师和地点信息
 function parseCourseDetails(detailStr) {
     // 匹配所有周次模式
