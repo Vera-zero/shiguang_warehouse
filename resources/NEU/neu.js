@@ -329,12 +329,12 @@ async function SaveConfig(time_text) {
 async function runAllDemosSequentially() {
     AndroidBridge.showToast("开始导入课表...");
     
-    // 1. 提示公告
-    const alertResult = await demoAlert();
-    if (!alertResult) {
-        console.log("用户取消了公告提示，停止后续执行。");
-        return; // 用户取消，立即退出函数
-    }
+    // // 1. 提示公告
+    // const alertResult = await demoAlert();
+    // if (!alertResult) {
+    //     console.log("用户取消了公告提示，停止后续执行。");
+    //     return; // 用户取消，立即退出函数
+    // }
 
     // 2. 校区选择
     const selectedCampus = await showCampusSelection();
