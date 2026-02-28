@@ -1,31 +1,9 @@
 // 文件: school.js
 
-// 1. 显示一个公告信息弹窗
-async function demoAlert() {
-    try {
-        console.log("即将显示公告弹窗...");
-        const confirmed = await window.AndroidBridgePromise.showAlert(
-            "注意",
-            "教务系统网址仅在校园网/连接校内vpn环境下可访问，无法进入时请检查网络连接，本适配仅适配东北大学本科生新教务系统，其他院校或研究生用户请谨慎使用。如有问题请联系开发者反馈。",
-            "我知道了"
-        );
-        if (confirmed) {
-            return true; // 成功时返回 true
-        } else {
-            return false; // 用户取消时返回 false
-        }
-    } catch (error) {
-        console.error("显示公告弹窗时发生错误:", error);
-        AndroidBridge.showToast("Alert：显示弹窗出错！" + error.message);
-        return false; // 出现错误时也返回 false
-    }
-}
-
 // 1.1 显示校区选择弹窗
 async function showCampusSelection() {
     const campuses = ["南湖校区", "浑南校区"];
     try {
-        console.log("即将显示单选列表弹窗...");
         const selectedIndex = await window.AndroidBridgePromise.showSingleSelection(
             "选择你所在的校区",
             JSON.stringify(campuses),
@@ -91,7 +69,6 @@ async function extractCoursesFromPage() {
                 });
             } 
         }
-        console.log("信息提取中");
     });
 
     return { lessons: lessons, time_text: time_text };
@@ -182,14 +159,11 @@ function parseWeeksString(weeksStr) {
 
 // 3. 导入课程数据
 async function SaveCourses(lessons) {
-    console.log("正在准备导入课程数据...");
     const testCourses = lessons;
 
     try {
-        console.log("正在尝试导入课程...");
         const result = await window.AndroidBridgePromise.saveImportedCourses(JSON.stringify(testCourses));
         if (result === true) {
-            console.log("课程导入成功！");
         } else {
             console.log("课程导入未成功，结果：" + result);
             AndroidBridge.showToast("课程导入失败，请查看日志。");
@@ -202,9 +176,6 @@ async function SaveCourses(lessons) {
 
 // 4. 根据校区导入对应的时间段
 async function importTimeSlotsByCampus(campus) {
-    console.log(`正在准备${campus}时间段数据...`);
-    
-    // 浑南校区时间表（现有时间表）
     const hunNanTimeSlots = [
         { "number": 1, "startTime": "08:30", "endTime": "09:15" },
         { "number": 2, "startTime": "09:25", "endTime": "10:10" },
@@ -219,8 +190,6 @@ async function importTimeSlotsByCampus(campus) {
         { "number": 11, "startTime": "20:30", "endTime": "21:15" },
         { "number": 12, "startTime": "21:15", "endTime": "22:10" },
     ];
-    
-    // 南湖校区时间表（根据图片内容）
     const nanHuTimeSlots = [
         { "number": 1, "startTime": "08:00", "endTime": "08:45" },
         { "number": 2, "startTime": "08:55", "endTime": "09:40" },
@@ -240,11 +209,8 @@ async function importTimeSlotsByCampus(campus) {
     const timeSlotsToImport = (campus === "南湖校区") ? nanHuTimeSlots : hunNanTimeSlots;
 
     try {
-        console.log(`正在尝试导入${campus}时间段...`);
         const result = await window.AndroidBridgePromise.savePresetTimeSlots(JSON.stringify(timeSlotsToImport));
         if (result === true) {
-            console.log(`${campus}时间段导入成功！`);
-            AndroidBridge.showToast(`${campus}时间段已应用`);
         } else {
             console.log("时间段导入未成功，结果：" + result);
             window.AndroidBridge.showToast("时间段导入失败，请查看日志。");
@@ -257,7 +223,6 @@ async function importTimeSlotsByCampus(campus) {
 
 // 5. 导入课表配置
 async function SaveConfig(time_text) {
-    console.log("正在准备配置数据...");
     // 注意：只传入要修改的字段，其他字段（如 semesterTotalWeeks）会使用 Kotlin 模型中的默认值
     const courseConfigData = {
         "semesterTotalWeeks": 18,
@@ -267,13 +232,10 @@ async function SaveConfig(time_text) {
     };
 
     try {
-        console.log("正在尝试导入课表配置...");
         const configJsonString = JSON.stringify(courseConfigData);
-
         const result = await window.AndroidBridgePromise.saveCourseConfig(configJsonString);
 
         if (result === true) {
-            console.log("课表配置导入成功！");
         } else {
             console.log("课表配置导入未成功，结果：" + result);
             AndroidBridge.showToast("配置导入失败，请查看日志。");
@@ -288,10 +250,8 @@ async function SaveConfig(time_text) {
  * 编排这些异步操作，并在用户取消时停止后续执行。
  */
 async function runAllDemosSequentially() {
-    AndroidBridge.showToast("开始导入课表...");
     
-
-    // 2. 校区选择
+    // 1. 校区选择
     const selectedCampus = await showCampusSelection();
     if (!selectedCampus) {
         console.log("用户取消了校区选择，停止后续执行。");
@@ -299,26 +259,24 @@ async function runAllDemosSequentially() {
         return; // 用户取消，立即退出函数
     }
 
-    console.log(`开始为${selectedCampus}导入课表数据...`);
-    AndroidBridge.showToast(`正在导入${selectedCampus}课表...`);
-
-    // 3. 从课表页面中提取课程数据
+    // 2. 从课表页面中提取课程数据
     const PageInfo = await extractCoursesFromPage();
     const lessons = PageInfo.lessons;
     const time_text = PageInfo.time_text;
     
-    // 4. 保存课程数据到数据库
+    // 3. 保存课程数据到数据库
     await SaveCourses(lessons);
     
-    // 5. 根据选择的校区导入对应的时间段
+    // 4. 根据选择的校区导入对应的时间段
     await importTimeSlotsByCampus(selectedCampus);
     
-    // 6. 保存底层配置
+    // 5. 保存底层配置
     await SaveConfig(time_text);
 
-    // 发送最终的生命周期完成信号
+    // 6. 发送最终的生命周期完成信号
     AndroidBridge.notifyTaskCompletion();
     AndroidBridge.showToast("课表导入完成！");
+    AndroidBridge.showToast("请手动设置开学时间，开启显示周末");
 }
 
 // 启动所有演示
