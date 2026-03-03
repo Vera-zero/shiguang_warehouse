@@ -1,16 +1,35 @@
 // 拾光课程表适配 Wakeup 课表分享口令
 
 /**
- * 验证用户输入，确保 Key 不为空。
- * 该函数必须在全局作用域中定义。
- * @param {string} key 用户输入的分享 Key
+ * 验证用户输入。
+ * 优化逻辑：检查输入中是否包含 32 位的 Hex 分享口令（允许是整段分享文本）。
+ * @param {string} input 用户输入的原始文本
  * @returns {false|string} 验证成功返回 false，否则返回错误信息。
  */
-function validateKey(key) {
-    if (key === null || key.trim().length === 0) {
-        return "课表分享 Key 不能为空！";
+function validateKey(input) {
+    if (input === null || input.trim().length === 0) {
+        return "输入不能为空！";
+    }
+    // 匹配 32 位字母或数字组成的 Key 特征
+    const keyPattern = /[a-fA-F0-9]{32}/;
+    if (!keyPattern.test(input)) {
+        return "未检测到有效的分享口令，请确保文本中包含 32 位 Key。";
     }
     return false; // 验证通过
+}
+
+/**
+ * 辅助函数：从长文本中提取 32 位 Key。
+ * 优先匹配「」内部，若无则匹配文本中第一个符合特征的字符串。
+ */
+function extractKeyFromText(text) {
+    // 1. 尝试匹配「」内的 32 位 Key
+    const bracketMatch = text.match(/「([a-fA-F0-9]{32})」/);
+    if (bracketMatch) return bracketMatch[1];
+
+    // 2. 兜底：直接查找文本中第一个符合 32 位特征的字符串
+    const directMatch = text.match(/[a-fA-F0-9]{32}/);
+    return directMatch ? directMatch[0] : text.trim();
 }
 
 /**
@@ -266,17 +285,20 @@ async function runImportFlow() {
     console.log("Wakeup 课表分享导入流程启动...");
     AndroidBridge.showToast("课表导入流程即将开始...");
 
-    // 获取用户输入 Key
-    const shareKey = await window.AndroidBridgePromise.showPrompt(
-        "输入课表分享 Key",
-        "请输入从分享链接中获取的 Key",
+    // 获取用户输入
+    const userInput = await window.AndroidBridgePromise.showPrompt(
+        "输入课表分享口令",
+        "可直接粘贴分享的整段文本，系统会自动提取 Key",
         "",
         "validateKey"
     );
-    if (shareKey === null) {
+    if (userInput === null) {
         AndroidBridge.showToast("导入已取消。");
         return;
     }
+
+    //  提取口令（从「」内或文本特征中提取 32 位 Key）
+    const shareKey = extractKeyFromText(userInput);
 
     // 网络请求和数据解析
     const parsed = await fetchAndParseData(shareKey);
